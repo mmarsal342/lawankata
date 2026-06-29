@@ -26,6 +26,21 @@ function generateUsername(): string {
   return `${adj[Math.floor(Math.random() * adj.length)]}_${n}`;
 }
 
+const BANNED_WORDS = [
+  "anjing", "babi", "bangsat", "brengsek", "kontol", "memek", "ngentot",
+  "jancok", "dancok", "jancuk", "dancuk", "asu", "bajingan", "kampret",
+  "goblok", "tolol", "bego", "fuck", "shit", "cunt", "dick", "pussy",
+  "asshole", "bastard", "bitch", "damn", "hell", "slut", "whore",
+  "nigga", "nigger", "retard", "faggot", "puki", "pepek", "tai",
+  "jembut", "pentil", "pler", "jablay", "lonte", "pelacur", "sundal",
+  "berengsek", "keparat", "setan", "iblis", "laknat", "celeng",
+];
+
+function containsBannedWord(username: string): boolean {
+  const lower = username.toLowerCase().replace(/[^a-z]/g, "");
+  return BANNED_WORDS.some((w) => lower.includes(w));
+}
+
 interface StageResultData {
   stageId: string;
   tier: string;
@@ -226,6 +241,7 @@ app.post("/api/username", async (c) => {
   const { username } = (await c.req.json()) as { username: string };
   const clean = username.replace(/[^a-zA-Z0-9_]/g, "").slice(0, 20);
   if (clean.length < 3) return c.json({ error: "Minimal 3 karakter" }, 400);
+  if (containsBannedWord(clean)) return c.json({ error: "Nama tidak sopan" }, 400);
 
   const existing = await c.env.DB.prepare("SELECT id FROM users WHERE username = ? AND id != ?")
     .bind(clean, user.id).first();

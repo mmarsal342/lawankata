@@ -2,6 +2,21 @@ import { useState, useRef } from "react";
 import { setUsername } from "../api";
 import { LIME } from "../constants";
 
+const BANNED: string[] = [
+  "anjing", "babi", "bangsat", "brengsek", "kontol", "memek", "ngentot",
+  "jancok", "dancok", "jancuk", "dancuk", "asu", "bajingan", "kampret",
+  "goblok", "tolol", "bego", "fuck", "shit", "cunt", "dick", "pussy",
+  "asshole", "bastard", "bitch", "damn", "hell", "slut", "whore",
+  "nigga", "nigger", "retard", "faggot", "puki", "pepek", "tai",
+  "jembut", "pentil", "pler", "jablay", "lonte", "pelacur", "sundal",
+  "berengsek", "keparat", "setan", "iblis", "laknat", "celeng",
+];
+
+function hasBannedWord(val: string): boolean {
+  const lower = val.toLowerCase().replace(/[^a-z]/g, "");
+  return BANNED.some((w) => lower.includes(w));
+}
+
 interface UsernameEditorProps {
   current: string;
   onClose: () => void;
@@ -18,6 +33,10 @@ export default function UsernameEditor({ current, onClose, onUpdated }: Username
     const clean = value.replace(/[^a-zA-Z0-9_]/g, "").slice(0, 20);
     if (clean.length < 3) {
       setError("Minimal 3 karakter (huruf/angka/_ )");
+      return;
+    }
+    if (hasBannedWord(clean)) {
+      setError("Nama tidak sopan — pilih yang lain");
       return;
     }
     setSaving(true);
