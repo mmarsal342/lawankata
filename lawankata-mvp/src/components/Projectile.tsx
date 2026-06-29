@@ -22,17 +22,33 @@ export default function Projectile({ p }: ProjectileProps) {
   }
 
   return (
-    <div
-      className="absolute font-mono font-bold text-sm md:text-base pointer-events-none whitespace-nowrap z-15"
-      style={{
-        left: `${x}%`,
-        top: `calc(47% + ${arc}px)`,
-        color,
-        textShadow: `0 0 10px ${glow}, 0 0 20px ${glow}`,
-        transform: "translateX(-50%) translateY(-50%)",
-      }}
-    >
-      {p.word}
-    </div>
+    <>
+      {/* Trail */}
+      <div
+        className="absolute font-mono font-bold text-sm md:text-base pointer-events-none whitespace-nowrap z-14 opacity-30"
+        style={{
+          left: `${x + (p.fromPlayer ? -3 : 3)}%`,
+          top: `calc(47% + ${arc}px)`,
+          color,
+          textShadow: `0 0 6px ${glow}cc`,
+          transform: "translateX(-50%) translateY(-50%)",
+        }}
+      >
+        {p.word}
+      </div>
+      {/* Main projectile */}
+      <div
+        className="absolute font-mono font-bold text-sm md:text-base pointer-events-none whitespace-nowrap z-15"
+        style={{
+          left: `${x}%`,
+          top: `calc(47% + ${arc}px)`,
+          color,
+          textShadow: `0 0 10px ${glow}, 0 0 20px ${glow}, 0 0 40px ${glow}80`,
+          transform: "translateX(-50%) translateY(-50%)",
+        }}
+      >
+        {p.word}
+      </div>
+    </>
   );
 }

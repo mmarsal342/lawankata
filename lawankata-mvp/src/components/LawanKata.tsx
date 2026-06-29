@@ -37,6 +37,7 @@ import SlotBar from "./SlotBar";
 import ParryIndicator from "./ParryIndicator";
 import StatusEffectBadge from "./StatusEffectBadge";
 import ComboDisplay from "./ComboDisplay";
+import { useParticleBurst, ParticleBurst } from "./ParticleBurst";
 import HUDBar from "./HUDBar";
 import NarrationOverlay from "./NarrationOverlay";
 import RunReportScreen from "./RunReportScreen";
@@ -58,6 +59,7 @@ function getStageTimeMs(stage: StageConfig): number {
 export default function LawanKata() {
   const vh = useVisualViewport();
   const { user, unlocks, login, logout, updateUnlocks } = useAuth();
+  const { particles, burst } = useParticleBurst();
 
   const pHPRef = useRef<number>(MAX_HP);
   const legitRef = useRef<number>(DEFAULT_LEGITIMACY);
@@ -96,6 +98,11 @@ export default function LawanKata() {
   const ultReadyRef = useRef<boolean>(false);
   const diffRef = useRef<Difficulty>("normal");
 
+  const triggerShake = useCallback(() => {
+    setScreenShake(true);
+    setTimeout(() => setScreenShake(false), 400);
+  }, []);
+
   const [playerHP, setPlayerHP] = useState(MAX_HP);
   const [legit, setLegit] = useState(DEFAULT_LEGITIMACY);
   const [legitMax, setLegitMax] = useState(DEFAULT_LEGITIMACY);
@@ -127,6 +134,7 @@ export default function LawanKata() {
   const [combo, setCombo] = useState(0);
   const [ultCharge, setUltCharge] = useState(0);
   const [ultReady, setUltReady] = useState(false);
+  const [screenShake, setScreenShake] = useState(false);
   const [showTutorial, setShowTutorial] = useState(() => {
     try {
       return !localStorage.getItem("lawankata_tutorial_done");
@@ -218,12 +226,14 @@ export default function LawanKata() {
     const dmg = char.ultimateDmg;
     fireProjRef.current(char.ultimateWord, dmg);
     showToast(`${char.ultimateWord}!`, "success");
+    burst(window.innerWidth * 0.2, window.innerHeight * 0.5, "#f97316", 16);
+    triggerShake();
     ultChargeRef.current = 0;
     ultReadyRef.current = false;
     setUltCharge(0);
     setUltReady(false);
     return true;
-  }, [showToast]);
+  }, [showToast, burst, triggerShake]);
 
   const firePlayerProjectile = useCallback((word: string, dmg: number) => {
     const finalDmg = Math.max(DAMAGE_FLOOR, dmg);
@@ -347,6 +357,8 @@ export default function LawanKata() {
           const mult = RESONANCE_MULT[resonance];
           showToast(`GAUNG x${mult}!`, "success");
           sfx.resonance();
+          burst(window.innerWidth * 0.2, window.innerHeight * 0.5, "#e8ff47", 12);
+          triggerShake();
         }
 
         setInput("");
@@ -372,7 +384,7 @@ export default function LawanKata() {
         showToast("Terlalu panjang!", "error");
       }
     },
-    [input.length, executeWord, trackWord, updateWPM, showToast, syncSlots, addUltCharge, fireUltimate],
+    [input.length, executeWord, trackWord, updateWPM, showToast, syncSlots, addUltCharge, fireUltimate, burst, triggerShake],
   );
 
   const finishStage = useCallback(
@@ -502,6 +514,7 @@ export default function LawanKata() {
         showToast(`-${p.dmg}`, "success");
         sfx.hit();
         addCombo();
+        burst(window.innerWidth * 0.82, window.innerHeight * 0.48, "#86efac", 5);
       } else {
         const travel = p.travelMs ?? TRAVEL_MS_PLAYER;
         const progress = (now - p.t0) / travel;
@@ -522,6 +535,7 @@ export default function LawanKata() {
             setPlayerHP(pHPRef.current);
             sfx.playerHit();
             resetCombo();
+            burst(window.innerWidth * 0.2, window.innerHeight * 0.48, "#ef4444", 6);
           }
           const weapon = p.weaponType ? WEAPONS[p.weaponType] : null;
           if (weapon?.effect) {
@@ -559,7 +573,7 @@ export default function LawanKata() {
       }
     }
     if (slotsChanged) syncSlots();
-  }, [frame, phase, blurActive, inputDelayed, showToast, checkStageEnd, finishStage, syncSlots, addCombo, resetCombo]);
+  }, [frame, phase, blurActive, inputDelayed, showToast, checkStageEnd, finishStage, syncSlots, addCombo, resetCombo, burst]);
 
   const enterStage = useCallback(
     (idx: number) => {
@@ -986,9 +1000,9 @@ export default function LawanKata() {
       )}
 
       {toast && (
-        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
+        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 pointer-events-none" key={toast.id}>
           <div
-            className={`px-3 py-1.5 rounded font-mono font-bold text-white text-[10px] md:text-sm shadow-lg ${
+            className={`px-3 py-1.5 rounded font-mono font-bold text-white text-[10px] md:text-sm shadow-lg animate-toast-in ${
               toast.type === "success"
                 ? "bg-green-600"
                 : toast.type === "error"
@@ -1000,6 +1014,13 @@ export default function LawanKata() {
           </div>
         </div>
       )}
+
+      {/* Screen shake overlay */}
+      {screenShake && (
+        <div className="absolute inset-0 pointer-events-none animate-screen-shake" />
+      )}
+
+      <ParticleBurst particles={particles} />
 
       {phase === "playing" && (
         <div className="absolute bottom-0 left-0 right-0 p-2 md:p-4 space-y-1.5 z-20">
