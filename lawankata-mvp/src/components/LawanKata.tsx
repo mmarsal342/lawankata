@@ -937,6 +937,7 @@ export default function LawanKata() {
               isGuarding={playerGuarding}
               hp={playerHP}
               maxHp={MAX_HP}
+              character={charRef.current}
             />
             {currentStage && (
               <EnemyVisual visualKey={currentStage.enemyVisual} isHit={enemyHit} />
