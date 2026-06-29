@@ -32,6 +32,7 @@ export interface AuthUser {
   name: string;
   picture: string | null;
   unlocked_chars: string | null;
+  username: string | null;
 }
 
 async function apiFetch(path: string, options?: RequestInit) {
@@ -55,6 +56,20 @@ export async function fetchMe(): Promise<{ user: AuthUser; unlocked: string[] } 
     return { user: data.user, unlocked: data.unlocked ?? ["warga"] };
   } catch {
     return null;
+  }
+}
+
+export async function setUsername(username: string): Promise<{ ok: boolean; error?: string; username?: string }> {
+  try {
+    const res = await apiFetch("/api/username", {
+      method: "POST",
+      body: JSON.stringify({ username }),
+    });
+    const data = (await res.json()) as { error?: string; username?: string };
+    if (res.ok) return { ok: true, username: data.username };
+    return { ok: false, error: data.error };
+  } catch {
+    return { ok: false, error: "Jaringan error" };
   }
 }
 

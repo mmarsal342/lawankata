@@ -46,6 +46,7 @@ import CharacterSelect from "./CharacterSelect";
 import LeaderboardScreen from "./LeaderboardScreen";
 import RunHistoryScreen from "./RunHistoryScreen";
 import StageGallery from "./StageGallery";
+import UsernameEditor from "./UsernameEditor";
 import TutorialOverlay from "./TutorialOverlay";
 import Footer from "./Footer";
 
@@ -58,7 +59,7 @@ function getStageTimeMs(stage: StageConfig): number {
 
 export default function LawanKata() {
   const vh = useVisualViewport();
-  const { user, unlocks, login, logout, updateUnlocks } = useAuth();
+  const { user, unlocks, login, logout, updateUnlocks, updateUsername, displayName } = useAuth();
   const { particles, burst } = useParticleBurst();
 
   const pHPRef = useRef<number>(MAX_HP);
@@ -142,6 +143,7 @@ export default function LawanKata() {
       return false;
     }
   });
+  const [showUsernameEditor, setShowUsernameEditor] = useState(false);
 
   const closeTutorial = useCallback(() => {
     setShowTutorial(false);
@@ -1076,11 +1078,13 @@ export default function LawanKata() {
         <StartScreen
           onStart={goToSelect}
           user={user}
+          displayName={displayName}
           onLogin={login}
           onLogout={logout}
           onLeaderboard={() => setPhase("leaderboard")}
           onHistory={() => setPhase("history")}
           onGallery={() => setPhase("gallery")}
+          onEditUsername={() => setShowUsernameEditor(true)}
         />
       )}
 
@@ -1143,6 +1147,14 @@ export default function LawanKata() {
         <RunReportScreen report={runReport} onRestart={goToIdle} />
       )}
       {phase !== "run_end" && <Footer />}
+
+      {showUsernameEditor && (
+        <UsernameEditor
+          current={displayName}
+          onClose={() => setShowUsernameEditor(false)}
+          onUpdated={(newName: string) => updateUsername(newName)}
+        />
+      )}
 
       {showTutorial && <TutorialOverlay onClose={closeTutorial} />}
     </div>

@@ -4,23 +4,28 @@ import type { AuthUser } from "../api";
 interface StartScreenProps {
   onStart: () => void;
   user: AuthUser | null;
+  displayName: string;
   onLogin: () => void;
   onLogout: () => void;
   onLeaderboard: () => void;
   onHistory: () => void;
   onGallery: () => void;
+  onEditUsername: () => void;
 }
 
-export default function StartScreen({ onStart, user, onLogin, onLogout, onLeaderboard, onHistory, onGallery }: StartScreenProps) {
+export default function StartScreen({ onStart, user, displayName, onLogin, onLogout, onLeaderboard, onHistory, onGallery, onEditUsername }: StartScreenProps) {
   return (
     <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm p-4 z-40 overflow-y-auto">
       {/* Auth bar */}
       <div className="absolute top-3 right-3 z-10 flex items-center gap-2">
         {user ? (
           <>
-            <span className="text-gray-400 text-[9px] md:text-xs font-mono">
-              {user.name}
-            </span>
+            <button
+              onClick={onEditUsername}
+              className="text-gray-400 text-[9px] md:text-xs font-mono hover:text-green transition-colors"
+            >
+              {displayName} ✎
+            </button>
             <button
               onClick={onLogout}
               className="px-2 py-1 text-[9px] md:text-xs font-mono text-gray-500 hover:text-gray-300 bg-black/50 rounded transition-colors"

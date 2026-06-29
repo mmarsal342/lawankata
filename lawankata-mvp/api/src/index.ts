@@ -17,6 +17,13 @@ interface User {
   name: string;
   picture: string | null;
   unlocked_chars: string | null;
+  username: string | null;
+}
+
+function generateUsername(): string {
+  const adj = ["Tegas", "Lantang", "Pedas", "Gigih", "Galak", "Cepat", "Tangguh", "Rebel", "Nyaring", "Kokoh", "Liar", "Tajam", "Hantam", "Satria", "Brave"];
+  const n = Math.floor(Math.random() * 9000) + 1000;
+  return `${adj[Math.floor(Math.random() * adj.length)]}_${n}`;
 }
 
 interface StageResultData {
@@ -181,16 +188,17 @@ app.get("/auth/callback", async (c) => {
     user = existing;
   } else {
     const id = generateUserId();
+    const username = generateUsername();
     await c.env.DB.prepare(
-      "INSERT INTO users (id, google_id, email, name, picture) VALUES (?, ?, ?, ?, ?)",
+      "INSERT INTO users (id, google_id, email, name, picture, username) VALUES (?, ?, ?, ?, ?, ?)",
     )
-      .bind(id, gUser.id, gUser.email, gUser.name, gUser.picture ?? null)
+      .bind(id, gUser.id, gUser.email, gUser.name, gUser.picture ?? null, username)
       .run();
-    user = { id, google_id: gUser.id, email: gUser.email, name: gUser.name, picture: gUser.picture ?? null };
+    user = { id, google_id: gUser.id, email: gUser.email, name: gUser.name, picture: gUser.picture ?? null, unlocked_chars: null, username };
   }
 
   const token = await signToken(
-    { sub: user.id, email: user.email, name: user.name, picture: user.picture ?? "" },
+    { sub: user.id, email: user.email, name: user.name, picture: user.picture ?? "", username: user.username ?? "" },
     c.env.JWT_SECRET,
   );
 
@@ -203,8 +211,30 @@ app.get("/api/me", async (c) => {
   const user = await getUserFromToken(c);
   if (!user) return c.json({ user: null });
 
+  const dbUser = await c.env.DB.prepare("SELECT username FROM users WHERE id = ?")
+    .bind(user.id).first<{ username: string }>();
+  const username = dbUser?.username ?? user.name;
+
   const unlocked = user.unlocked_chars ?? "warga";
-  return c.json({ user, unlocked: unlocked.split(",") });
+  return c.json({ user: { ...user, username }, unlocked: unlocked.split(",") });
+});
+
+app.post("/api/username", async (c) => {
+  const user = await getUserFromToken(c);
+  if (!user) return c.json({ error: "Unauthorized" }, 401);
+
+  const { username } = (await c.req.json()) as { username: string };
+  const clean = username.replace(/[^a-zA-Z0-9_]/g, "").slice(0, 20);
+  if (clean.length < 3) return c.json({ error: "Minimal 3 karakter" }, 400);
+
+  const existing = await c.env.DB.prepare("SELECT id FROM users WHERE username = ? AND id != ?")
+    .bind(clean, user.id).first();
+  if (existing) return c.json({ error: "Username sudah dipakai" }, 400);
+
+  await c.env.DB.prepare("UPDATE users SET username = ? WHERE id = ?")
+    .bind(clean, user.id).run();
+
+  return c.json({ username: clean });
 });
 
 app.post("/api/runs", async (c) => {
@@ -270,7 +300,7 @@ app.get("/api/runs", async (c) => {
 
 app.get("/api/leaderboard", async (c) => {
   const results = await c.env.DB.prepare(
-    `SELECT r.*, u.name as user_name, u.picture as user_picture
+    `SELECT r.*, COALESCE(u.username, u.name) as user_name, u.picture as user_picture
      FROM runs r
      JOIN users u ON r.user_id = u.id
      ORDER BY r.avg_wpm DESC
