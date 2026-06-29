@@ -377,7 +377,8 @@ export default function LawanKata() {
         return;
       }
 
-      const hasPrefix = slotsRef.current.some((s) => s.word && s.word.word.startsWith(v));
+      const hasPrefix = slotsRef.current.some((s) => s.word && s.word.word.startsWith(v))
+        || (ultReadyRef.current && charRef.current.ultimateWord.startsWith(v));
       if (v.length > INPUT_PENALTY_LEN && !hasPrefix) {
         setShake(true);
         setTimeout(() => setShake(false), 300);
