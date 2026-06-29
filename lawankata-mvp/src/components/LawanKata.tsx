@@ -27,8 +27,6 @@ import { saveRun } from "../api";
 
 import ArenaBackground from "./ArenaBackground";
 import PlayerStickman from "./PlayerStickman";
-import CharacterSprite from "./CharacterSprite";
-import type { SpriteFrame } from "./CharacterSprite";
 import EnemyVisual from "./EnemyVisual";
 import ProjectileEl from "./Projectile";
 import HPBar from "./HPBar";
@@ -138,7 +136,6 @@ export default function LawanKata() {
   const [ultCharge, setUltCharge] = useState(0);
   const [ultReady, setUltReady] = useState(false);
   const [screenShake, setScreenShake] = useState(false);
-  const [spriteFrame, setSpriteFrame] = useState<SpriteFrame>("idle");
   const [showTutorial, setShowTutorial] = useState(() => {
     try {
       return !localStorage.getItem("lawankata_tutorial_done");
@@ -253,8 +250,6 @@ export default function LawanKata() {
     setProjs([...projsRef.current]);
     setPlayerGuarding(true);
     setTimeout(() => setPlayerGuarding(false), 150);
-    setSpriteFrame("attack");
-    setTimeout(() => setSpriteFrame("idle"), 300);
     sfx.whoosh();
   }, []);
 
@@ -544,7 +539,6 @@ export default function LawanKata() {
             sfx.playerHit();
             resetCombo();
             burst(window.innerWidth * 0.2, window.innerHeight * 0.48, "#ef4444", 6);
-            setSpriteFrame("hurt");
           }
           const weapon = p.weaponType ? WEAPONS[p.weaponType] : null;
           if (weapon?.effect) {
@@ -851,8 +845,6 @@ export default function LawanKata() {
       showToast("TANGKIS!", "success");
       sfx.parry();
       setParryFlash("success");
-      setSpriteFrame("block");
-      setTimeout(() => setSpriteFrame("idle"), 300);
       setTimeout(() => setParryFlash(null), 300);
     } else {
       showToast("MELESET!", "error");
@@ -944,12 +936,6 @@ export default function LawanKata() {
       {phase === "playing" && (
         <>
           <div className="absolute inset-0">
-            <CharacterSprite
-              charId={charRef.current.id}
-              color={charRef.current.color}
-              frame={spriteFrame}
-              isLowHP={playerHP / MAX_HP <= 0.25}
-            />
             <PlayerStickman
               isGuarding={playerGuarding}
               hp={playerHP}
