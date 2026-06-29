@@ -50,11 +50,11 @@ async function computeUnlocks(
 
   if (runData) {
     for (const r of runData.results) {
-      if (r.tier === "C" && r.won) {
+      if (r.won) {
         await db.prepare(
-          `INSERT INTO user_progress (user_id, stage_id, tier, won) VALUES (?, ?, 'C', 1)
+          `INSERT INTO user_progress (user_id, stage_id, tier, won) VALUES (?, ?, ?, 1)
            ON CONFLICT(user_id, stage_id) DO UPDATE SET won = 1`,
-        ).bind(userId, r.stageId).run();
+        ).bind(userId, r.stageId, r.tier).run();
       }
     }
 
