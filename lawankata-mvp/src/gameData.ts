@@ -76,8 +76,53 @@ export function getStageWordDmg(): number {
   return Math.max(DAMAGE_FLOOR, STAGE_WORD_DEFAULT_DMG);
 }
 
+// --- COMBO SYSTEM ---
+
+export const ULT_THRESHOLD = 5;
+
+export interface ComboTier {
+  threshold: number;
+  label: string;
+  multiplier: number;
+  color: string;
+}
+
+export const COMBO_TIERS: ComboTier[] = [
+  { threshold: 3, label: "Beruntun", multiplier: 1.10, color: "#4ade80" },
+  { threshold: 5, label: "Ganas", multiplier: 1.20, color: "#fbbf24" },
+  { threshold: 8, label: "Badai", multiplier: 1.35, color: "#fb923c" },
+  { threshold: 12, label: "LAGA SEMPURNA", multiplier: 1.50, color: "#ef4444" },
+];
+
+export function getComboMultiplier(combo: number): { mult: number; tier: ComboTier | null } {
+  let result: { mult: number; tier: ComboTier | null } = { mult: 1.0, tier: null };
+  for (const t of COMBO_TIERS) {
+    if (combo >= t.threshold) result = { mult: t.multiplier, tier: t };
+  }
+  return result;
+}
+
+// --- DIFFICULTY ---
+
+export type Difficulty = "easy" | "normal" | "hard";
+
+export interface DifficultyConfig {
+  enemyDmgMult: number;
+  enemySpeedMult: number;
+  legitimacyMult: number;
+  label: string;
+}
+
+export const DIFFICULTIES: Record<Difficulty, DifficultyConfig> = {
+  easy: { enemyDmgMult: 0.8, enemySpeedMult: 1.3, legitimacyMult: 0.85, label: "Easy" },
+  normal: { enemyDmgMult: 1.0, enemySpeedMult: 1.0, legitimacyMult: 1.0, label: "Normal" },
+  hard: { enemyDmgMult: 1.3, enemySpeedMult: 0.7, legitimacyMult: 1.2, label: "Hard" },
+};
+
+// --- DECK MANAGER ---
+
 export const SLOT_COUNT = 3;
-export const DEFENSE_DRAW_CHANCE = 0.35;
+export const DEFENSE_DRAW_CHANCE = 0.25;
 
 export type ResonanceLevel = 1 | 2 | 3;
 

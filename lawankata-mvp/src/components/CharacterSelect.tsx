@@ -1,12 +1,16 @@
 import { CHARACTERS, UNLOCK_HINTS } from "../characters";
 import type { Character } from "../characters";
 import { LIME } from "../constants";
+import { DIFFICULTIES } from "../gameData";
+import type { Difficulty } from "../gameData";
 
 interface CharacterSelectProps {
   selectedId: string;
   unlocks: string[];
   isLoggedIn: boolean;
+  difficulty: Difficulty;
   onSelect: (id: string) => void;
+  onDifficulty: (d: Difficulty) => void;
   onFight: () => void;
   onBack: () => void;
 }
@@ -15,7 +19,9 @@ export default function CharacterSelect({
   selectedId,
   unlocks,
   isLoggedIn,
+  difficulty,
   onSelect,
+  onDifficulty,
   onFight,
   onBack,
 }: CharacterSelectProps) {
@@ -88,6 +94,35 @@ export default function CharacterSelect({
             </p>
           </div>
         )}
+
+        {/* Difficulty selector */}
+        <div className="mb-4">
+          <p className="text-gray-600 text-[9px] md:text-[10px] uppercase tracking-wide mb-2 text-center font-mono">
+            Kesulitan
+          </p>
+          <div className="flex gap-1.5">
+            {(Object.keys(DIFFICULTIES) as Difficulty[]).map((d) => {
+              const cfg = DIFFICULTIES[d];
+              const isActive = difficulty === d;
+              return (
+                <button
+                  key={d}
+                  onClick={() => onDifficulty(d)}
+                  className={`flex-1 py-2 rounded-lg font-mono text-[9px] md:text-[11px] font-bold transition-all border-2 ${
+                    isActive
+                      ? "border-gray-400 text-gray-200"
+                      : "border-gray-800 text-gray-600 hover:border-gray-700"
+                  }`}
+                  style={{
+                    backgroundColor: isActive ? "#374151" : "rgba(17,24,39,0.6)",
+                  }}
+                >
+                  {cfg.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
 
         <button
           onClick={onFight}

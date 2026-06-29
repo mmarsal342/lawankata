@@ -12,6 +12,8 @@ export interface Character {
   refillMod: number;
   hpRecoveryBonus: number;
   damageTakenMult: number;
+  ultimateWord: string;
+  ultimateDmg: number;
 }
 
 export const CHARACTERS: Character[] = [
@@ -29,6 +31,8 @@ export const CHARACTERS: Character[] = [
     refillMod: 1,
     hpRecoveryBonus: 0,
     damageTakenMult: 1,
+    ultimateWord: "MELAWAN",
+    ultimateDmg: 65,
   },
   {
     id: "jurnalis",
@@ -44,6 +48,8 @@ export const CHARACTERS: Character[] = [
     refillMod: 1,
     hpRecoveryBonus: 0,
     damageTakenMult: 1.25,
+    ultimateWord: "MEMBONGKAR",
+    ultimateDmg: 55,
   },
   {
     id: "pengacara",
@@ -59,6 +65,8 @@ export const CHARACTERS: Character[] = [
     refillMod: 1.35,
     hpRecoveryBonus: 0,
     damageTakenMult: 1,
+    ultimateWord: "MENUNTUT",
+    ultimateDmg: 70,
   },
   {
     id: "aktivis",
@@ -74,6 +82,8 @@ export const CHARACTERS: Character[] = [
     refillMod: 1.3,
     hpRecoveryBonus: 0,
     damageTakenMult: 1,
+    ultimateWord: "MENGERAHKAN",
+    ultimateDmg: 50,
   },
   {
     id: "iburt",
@@ -89,6 +99,8 @@ export const CHARACTERS: Character[] = [
     refillMod: 1,
     hpRecoveryBonus: 10,
     damageTakenMult: 1,
+    ultimateWord: "BERTAHAN",
+    ultimateDmg: 50,
   },
 ];
 

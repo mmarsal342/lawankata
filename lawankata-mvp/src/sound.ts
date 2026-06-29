@@ -112,6 +112,11 @@ export const sfx = {
     setTimeout(() => tone(1100, 0.12, "triangle", 0.22), 70);
     setTimeout(() => tone(1320, 0.18, "triangle", 0.25), 140);
   },
+  ultReady() {
+    tone(523, 0.1, "triangle", 0.2);
+    setTimeout(() => tone(659, 0.1, "triangle", 0.22), 100);
+    setTimeout(() => tone(784, 0.15, "triangle", 0.25), 200);
+  },
   staticNoise() {
     noiseBurst(0.4, 1500, 0.18, 200);
   },

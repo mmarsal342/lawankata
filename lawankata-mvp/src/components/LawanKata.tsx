@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import type { GamePhase, Projectile, StageConfig, WordDef, SlotState, RunState, RunReport, StageResult } from "../types";
-import { WEAPONS, getWeaponDamage, createDeckManager, getRefillDelay, SLOT_COUNT, detectResonance, RESONANCE_MULT } from "../gameData";
-import type { ResonanceLevel } from "../gameData";
+import { WEAPONS, getWeaponDamage, createDeckManager, getRefillDelay, SLOT_COUNT, detectResonance, RESONANCE_MULT, getComboMultiplier, ULT_THRESHOLD, DIFFICULTIES } from "../gameData";
+import type { ResonanceLevel, Difficulty } from "../gameData";
 import {
   MAX_HP,
   DEFAULT_LEGITIMACY,
@@ -36,6 +36,7 @@ import InputField from "./InputField";
 import SlotBar from "./SlotBar";
 import ParryIndicator from "./ParryIndicator";
 import StatusEffectBadge from "./StatusEffectBadge";
+import ComboDisplay from "./ComboDisplay";
 import HUDBar from "./HUDBar";
 import NarrationOverlay from "./NarrationOverlay";
 import RunReportScreen from "./RunReportScreen";
@@ -89,6 +90,11 @@ export default function LawanKata() {
   const runMinHpRef = useRef<number>(MAX_HP);
   const charRef = useRef<Character>(CHARACTERS[0]);
   const endRunRef = useRef<() => void>(() => {});
+  const fireProjRef = useRef<(word: string, dmg: number) => void>(() => {});
+  const comboRef = useRef<number>(0);
+  const ultChargeRef = useRef<number>(0);
+  const ultReadyRef = useRef<boolean>(false);
+  const diffRef = useRef<Difficulty>("normal");
 
   const [playerHP, setPlayerHP] = useState(MAX_HP);
   const [legit, setLegit] = useState(DEFAULT_LEGITIMACY);
@@ -117,6 +123,10 @@ export default function LawanKata() {
   const [runReport, setRunReport] = useState<RunReport | null>(null);
   const [soundOn, setSoundOn] = useState(true);
   const [selectedCharId, setSelectedCharId] = useState("warga");
+  const [difficulty, setDifficulty] = useState<Difficulty>("normal");
+  const [combo, setCombo] = useState(0);
+  const [ultCharge, setUltCharge] = useState(0);
+  const [ultReady, setUltReady] = useState(false);
   const [showTutorial, setShowTutorial] = useState(() => {
     try {
       return !localStorage.getItem("lawankata_tutorial_done");
@@ -170,6 +180,51 @@ export default function LawanKata() {
     setSlots(slotsRef.current.map((s) => ({ ...s })));
   }, []);
 
+  const addCombo = useCallback(() => {
+    const prev = comboRef.current;
+    comboRef.current++;
+    setCombo(comboRef.current);
+    const prevTier = getComboMultiplier(prev);
+    const newTier = getComboMultiplier(comboRef.current);
+    if (newTier.tier && (!prevTier.tier || newTier.tier.threshold > prevTier.tier.threshold)) {
+      showToast(`${newTier.tier.label}! x${newTier.tier.multiplier}`, "success");
+      sfx.ultReady();
+    }
+  }, [showToast]);
+
+  const resetCombo = useCallback(() => {
+    if (comboRef.current >= 3) {
+      showToast("COMBO PUTUS!", "error");
+      sfx.playerHit();
+    }
+    comboRef.current = 0;
+    setCombo(0);
+  }, [showToast]);
+
+  const addUltCharge = useCallback(() => {
+    if (ultReadyRef.current) return;
+    ultChargeRef.current++;
+    setUltCharge(ultChargeRef.current);
+    if (ultChargeRef.current >= ULT_THRESHOLD) {
+      ultReadyRef.current = true;
+      setUltReady(true);
+      sfx.ultReady();
+    }
+  }, []);
+
+  const fireUltimate = useCallback(() => {
+    if (!ultReadyRef.current) return false;
+    const char = charRef.current;
+    const dmg = char.ultimateDmg;
+    fireProjRef.current(char.ultimateWord, dmg);
+    showToast(`${char.ultimateWord}!`, "success");
+    ultChargeRef.current = 0;
+    ultReadyRef.current = false;
+    setUltCharge(0);
+    setUltReady(false);
+    return true;
+  }, [showToast]);
+
   const firePlayerProjectile = useCallback((word: string, dmg: number) => {
     const finalDmg = Math.max(DAMAGE_FLOOR, dmg);
     const proj: Projectile = {
@@ -186,13 +241,16 @@ export default function LawanKata() {
     sfx.whoosh();
   }, []);
 
+  fireProjRef.current = firePlayerProjectile;
+
   const executeWord = useCallback(
     (word: WordDef, resonance: ResonanceLevel): boolean => {
       const mult = RESONANCE_MULT[resonance];
       switch (word.role) {
         case "attack": {
           const charMult = getWordDamageMult(word.word, charRef.current);
-          let dmg = (word.dmg ?? 15) * mult * charMult;
+          const { mult: comboMult } = getComboMultiplier(comboRef.current);
+          let dmg = Math.round((word.dmg ?? 15) * mult * charMult * comboMult);
           if (word.word === "VIRAL") {
             const enemyInFlight = projsRef.current.some((p) => !p.fromPlayer);
             if (enemyInFlight) {
@@ -294,6 +352,14 @@ export default function LawanKata() {
         setInput("");
         trackWord(wordDef.word);
         updateWPM(wordDef.word.length);
+        addUltCharge();
+        return;
+      }
+
+      if (ultReadyRef.current && charRef.current.ultimateWord === v) {
+        fireUltimate();
+        setInput("");
+        updateWPM(charRef.current.ultimateWord.length);
         return;
       }
 
@@ -306,7 +372,7 @@ export default function LawanKata() {
         showToast("Terlalu panjang!", "error");
       }
     },
-    [input.length, executeWord, trackWord, updateWPM, showToast, syncSlots],
+    [input.length, executeWord, trackWord, updateWPM, showToast, syncSlots, addUltCharge, fireUltimate],
   );
 
   const finishStage = useCallback(
@@ -393,7 +459,7 @@ export default function LawanKata() {
     setProjs([...projsRef.current]);
 
     const [minDelay, maxDelay] = stage.cpuIntervalMs;
-    const delay = minDelay + Math.random() * (maxDelay - minDelay);
+    const delay = (minDelay + Math.random() * (maxDelay - minDelay)) * DIFFICULTIES[diffRef.current].enemySpeedMult;
     cpuTimerRef.current = window.setTimeout(scheduleCpuAttack, delay);
   }, []);
 
@@ -435,6 +501,7 @@ export default function LawanKata() {
         setTimeout(() => setEnemyHit(false), 200);
         showToast(`-${p.dmg}`, "success");
         sfx.hit();
+        addCombo();
       } else {
         const travel = p.travelMs ?? TRAVEL_MS_PLAYER;
         const progress = (now - p.t0) / travel;
@@ -448,11 +515,13 @@ export default function LawanKata() {
           showToast("BUKTI tangkis!", "info");
         } else {
           if (p.dmg > 0) {
-            const finalDmg = Math.round(p.dmg * charRef.current.damageTakenMult);
+            const diffDmg = Math.round(p.dmg * DIFFICULTIES[diffRef.current].enemyDmgMult);
+            const finalDmg = Math.round(diffDmg * charRef.current.damageTakenMult);
             pHPRef.current = Math.max(0, pHPRef.current - finalDmg);
             if (pHPRef.current < runMinHpRef.current) runMinHpRef.current = pHPRef.current;
             setPlayerHP(pHPRef.current);
             sfx.playerHit();
+            resetCombo();
           }
           const weapon = p.weaponType ? WEAPONS[p.weaponType] : null;
           if (weapon?.effect) {
@@ -490,7 +559,7 @@ export default function LawanKata() {
       }
     }
     if (slotsChanged) syncSlots();
-  }, [frame, phase, blurActive, inputDelayed, showToast, checkStageEnd, finishStage, syncSlots]);
+  }, [frame, phase, blurActive, inputDelayed, showToast, checkStageEnd, finishStage, syncSlots, addCombo, resetCombo]);
 
   const enterStage = useCallback(
     (idx: number) => {
@@ -510,8 +579,8 @@ export default function LawanKata() {
       }
       stageStartHpRef.current = run.playerHP;
       pHPRef.current = run.playerHP;
-      legitRef.current = scaled.legitimacyHp;
-      legitMaxRef.current = scaled.legitimacyHp;
+      legitRef.current = Math.round(scaled.legitimacyHp * DIFFICULTIES[diffRef.current].legitimacyMult);
+      legitMaxRef.current = legitRef.current;
       projsRef.current = [];
       shieldRef.current = 0;
       blurDisabledUntilRef.current = 0;
@@ -519,14 +588,17 @@ export default function LawanKata() {
       inputPenaltyUntilRef.current = 0;
       parryCdRef.current = 0;
       stageEndAtRef.current = 0;
+      comboRef.current = 0;
+      ultChargeRef.current = 0;
+      ultReadyRef.current = false;
       wordsUsedRef.current = {};
       stageWpmRef.current = 0;
       totalCharsRef.current = 0;
       startTimeRef.current = 0;
 
       setPlayerHP(run.playerHP);
-      setLegit(scaled.legitimacyHp);
-      setLegitMax(scaled.legitimacyHp);
+      setLegit(legitRef.current);
+      setLegitMax(legitMaxRef.current);
       setProjs([]);
       setShield(0);
       setBlurActive(false);
@@ -534,6 +606,9 @@ export default function LawanKata() {
       setInput("");
       setWpm(0);
       setParryCdEnd(0);
+      setCombo(0);
+      setUltCharge(0);
+      setUltReady(false);
       setCurrentStage(stage);
       setStageIdx(idx + 1);
       setStageHpBefore(run.playerHP);
@@ -784,6 +859,9 @@ export default function LawanKata() {
     for (const s of slotsRef.current) {
       if (s.word && s.word.word.startsWith(input) && s.word.word !== input) return s.word.word;
     }
+    if (ultReadyRef.current && charRef.current.ultimateWord.startsWith(input) && charRef.current.ultimateWord !== input) {
+      return charRef.current.ultimateWord;
+    }
     return null;
   })();
 
@@ -856,6 +934,7 @@ export default function LawanKata() {
 
           <HPBar hp={playerHP} />
           <LegitimacyBar legit={legit} max={legitMax} label={currentStage?.enemyLabel ?? ""} />
+          <ComboDisplay combo={combo} />
           <ShieldIndicator charges={shield} />
           <StatusEffectBadge
             blurActive={blurActive}
@@ -929,6 +1008,36 @@ export default function LawanKata() {
             typedInput={input}
             blurActive={blurActive}
           />
+
+          {/* Ultimate slot */}
+          <div className="flex justify-center">
+            {ultReady ? (
+              <div
+                className="w-40 md:w-52 h-10 md:h-12 rounded-lg border-2 border-orange-500 bg-orange-950/30 px-2 py-0.5 flex flex-col items-center justify-center animate-pulse"
+                style={{ boxShadow: "0 0 12px rgba(249, 115, 22, 0.4)" }}
+              >
+                <span className="font-mono font-bold text-sm text-orange-400 tracking-wider">
+                  {charRef.current.ultimateWord}
+                </span>
+                <span className="text-[9px] text-orange-600">
+                  {charRef.current.ultimateDmg} ULTIMATE
+                </span>
+              </div>
+            ) : (
+              <div className="w-40 md:w-52 h-10 md:h-12 rounded-lg border border-gray-800 bg-gray-900/50 px-2 py-0.5 flex flex-col items-center justify-center">
+                <div className="flex items-center gap-1">
+                  {[...Array(ULT_THRESHOLD)].map((_, i) => (
+                    <div
+                      key={i}
+                      className={`w-2 h-2 rounded-full ${i < ultCharge ? "bg-orange-500" : "bg-gray-700"}`}
+                    />
+                  ))}
+                </div>
+                <span className="text-[8px] text-gray-600 mt-0.5">ULTIMATE</span>
+              </div>
+            )}
+          </div>
+
           <InputField
             value={input}
             onChange={handleInput}
@@ -970,9 +1079,14 @@ export default function LawanKata() {
           selectedId={selectedCharId}
           unlocks={unlocks}
           isLoggedIn={!!user}
+          difficulty={difficulty}
           onSelect={(id) => {
             setSelectedCharId(id);
             sfx.select();
+          }}
+          onDifficulty={(d) => {
+            setDifficulty(d);
+            diffRef.current = d;
           }}
           onFight={startRun}
           onBack={goToIdle}
