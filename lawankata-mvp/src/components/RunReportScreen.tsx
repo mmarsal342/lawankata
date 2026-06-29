@@ -1,5 +1,7 @@
+import { useState } from "react";
 import type { RunReport } from "../types";
 import { LIME, MAX_HP } from "../constants";
+import ShareCard from "./ShareCard";
 
 interface RunReportScreenProps {
   report: RunReport;
@@ -7,6 +9,7 @@ interface RunReportScreenProps {
 }
 
 export default function RunReportScreen({ report, onRestart }: RunReportScreenProps) {
+  const [showShare, setShowShare] = useState(false);
   const wins = report.results.filter((r) => r.won).length;
   const losses = report.results.length - wins;
   const goodRun = wins > losses;
@@ -116,22 +119,31 @@ export default function RunReportScreen({ report, onRestart }: RunReportScreenPr
               ? "Sistem tidak rubah dalam satu run. Tapi kamu sudah tahu kata apa yang harus dipakai."
               : "Orang tidak berhenti hidup karena satu kegagalan. Coba lagi."}
           </p>
-          <button
-            onClick={onRestart}
-            className="px-8 py-3 font-bold text-base md:text-lg rounded-lg transition-all"
-            style={{
-              backgroundColor: LIME,
-              color: "#0a0a0a",
-              boxShadow: `0 0 15px ${LIME}33`,
-            }}
-          >
-            MAIN LAGI
-          </button>
+          <div className="flex gap-2 justify-center">
+            <button
+              onClick={() => setShowShare(true)}
+              className="px-6 py-3 font-bold text-sm md:text-base rounded-lg transition-all font-mono border-2 border-gray-700 text-gray-300 hover:border-gray-500"
+            >
+              📤 BAGIKAN
+            </button>
+            <button
+              onClick={onRestart}
+              className="px-8 py-3 font-bold text-base md:text-lg rounded-lg transition-all"
+              style={{
+                backgroundColor: LIME,
+                color: "#0a0a0a",
+                boxShadow: `0 0 15px ${LIME}33`,
+              }}
+            >
+              MAIN LAGI
+            </button>
+          </div>
           <p className="text-gray-700 text-[8px] md:text-[9px] mt-4">
             HP max {MAX_HP} • Lawan sistem, bukan orang
           </p>
         </div>
       </div>
+      {showShare && <ShareCard report={report} onClose={() => setShowShare(false)} />}
     </div>
   );
 }

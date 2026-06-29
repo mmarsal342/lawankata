@@ -122,4 +122,120 @@ export const TIER_A_STAGES: StageConfig[] = [
     legitimacyHp: 100,
     cpuIntervalMs: [3500, 5500],
   },
+  {
+    id: "imigrasi_001",
+    tier: "A",
+    title: "Paspor Online yang Selalu Penuh",
+    year: 2023,
+    enemyLabel: "SISTEM IMIGRASI",
+    enemyVisual: "passport_doc",
+    weapons: ["slow", "standard"],
+    openingNarration:
+      "Buka aplikasi paspor online. Kuota penuh. Buka lagi besok — penuh lagi. Padahal kamu sudah punya tiket.",
+    winNarration:
+      "Kamu temui layanan pengaduan. Slot dibuka. Paspor selesai dalam 3 hari. Tapi tanpa pengaduan, tidak ada.",
+    loseNarration:
+      "Berbulan-bulan menunggu. Kamu akhirnya pakai calo. Paspor selesai dalam 2 hari. Sistem resmi kalah lagi.",
+    fact: "Layanan paspor online sering dikritik karena kuota yang terbatas dan slot yang hilang begitu saja.",
+    wordPool: ["PASPOR", "KUOTA", "CALO", "BIOMETRIK", "PROSES", "ELEKTRONIK"],
+    wordNotes: {
+      KUOTA: "Batas jumlah layanan per hari yang sering membuat warga harus berlomba mendapatkan slot.",
+      BIOMETRIK: "Perekaman data fisik wajah dan sidik jari yang menjadi syarat paspor modern.",
+    },
+    legitimacyHp: 100,
+    cpuIntervalMs: [3500, 5500],
+  },
+  {
+    id: "banjir_001",
+    tier: "A",
+    title: "Banjir Tahunan yang Sudah Jadi Tradisi",
+    year: 2023,
+    enemyLabel: "DINAS PENGAIRAN",
+    enemyVisual: "flood_water",
+    weapons: ["standard", "slow"],
+    openingNarration:
+      "Tiap tahun, banjir yang sama di titik yang sama. Drainase dibersihkan setelah banjir, bukan sebelumnya.",
+    winNarration:
+      "Warga mengajukan class action. Pengadilan memutuskan dinas wajib memelihara drainase sebelum musim hujan.",
+    loseNarration:
+      "Banjir datang lagi tahun depan. Rumahmu terendam 30cm lagi. Asuransi tidak mau membayar — 'kejadian berulang'.",
+    fact: "Jakarta mencatat banjir tahunan yang merugikan triliunan rupiah, banyak di antaranya di titik yang sama setiap tahun.",
+    wordPool: ["DRAINASE", "NORMALISASI", "SEDIMEN", "POMPA", "DAERAH", "ALIRAN"],
+    wordNotes: {
+      DRAINASE: "Sistem pembuangan air yang seharusnya mencegah genangan tetapi sering tidak terawat.",
+      SEDIMEN: "Endapan lumpur yang menyumbat aliran air dan menyebabkan banjir jika tidak dibersihkan.",
+      NORMALISASI: "Pengerukan dan pelebaran sungai untuk menampung debit air lebih besar.",
+    },
+    legitimacyHp: 100,
+    cpuIntervalMs: [3500, 5500],
+  },
+  {
+    id: "pln_001",
+    tier: "A",
+    title: "Pemadaman Bergilir Tanpa Kabar",
+    year: 2022,
+    enemyLabel: "PLN WILAYAH",
+    enemyVisual: "power_outage",
+    weapons: ["blur", "standard"],
+    openingNarration:
+      "Listrik mati tiba-tiba. Tidak ada pengumuman. Aplikasi PLN bilang 'pemeliharaan terjadwal' — yang jadwalnya berubah terus.",
+    winNarration:
+      "Warga melapor ke Ombudsman. PLN diminta memberitahu minimal 3 hari sebelum pemadaman. Tapi tidak selalu dipatuhi.",
+    loseNarration:
+      "Listrik mati 6 jam. Makanan di kulkas rusak. PLN bilang 'diluar tanggung jawab'. Kamu merasa sudah biasa.",
+    fact: "PLN mencatat ribuan keluhan pemadaman tanpa pemberitahuan setiap tahun di berbagai daerah.",
+    wordPool: ["PEMADAMAN", "GANGGUAN", "KOMPENSASI", "TARIF", "JARINGAN", "SISTEM"],
+    wordNotes: {
+      KOMPENSASI: "Penggantian kerugian yang seharusnya diberikan PLN saat pemadaman melampaui batas waktu.",
+      TARIF: "Biaya listrik yang tetap dibayar penuh meskipun layanan tidak stabil.",
+    },
+    legitimacyHp: 100,
+    cpuIntervalMs: [3500, 5500],
+  },
+  {
+    id: "pdam_001",
+    tier: "A",
+    title: "Air Keran Keruh dan Bau",
+    year: 2022,
+    enemyLabel: "PDAM LOKAL",
+    enemyVisual: "water_tap",
+    weapons: ["standard", "slow"],
+    openingNarration:
+      "Air dari keran kuning keruh. Baunya anyir. Tapi tagihan bulanan tetap datang penuh, tanpa potongan.",
+    winNarration:
+      "Warga bawa sampel ke lab. Hasilnya: bakteri di atas ambang batas. PDAM dipaksa perbaiki instalasi.",
+    loseNarration:
+      "Kamu beli galon lagi bulan ini. Tagihan air tetap bayar. Banyak warga seperti kamu — 'sudah biasa'.",
+    fact: "Banyak PDAM daerah menghasilkan air yang tidak memenuhi standar kualitas minum menurut Kemenkes.",
+    wordPool: ["PDAM", "BAKTERI", "INSTALASI", "FILTER", "KUALITAS", "SUMBER"],
+    wordNotes: {
+      PDAM: "Perusahaan Daerah Air Minih — seharusnya menyediakan air bersih untuk warga.",
+      INSTALASI: "Fasilitas pengolahan air yang sering usang dan tidak terawat di banyak daerah.",
+    },
+    legitimacyHp: 100,
+    cpuIntervalMs: [3500, 5500],
+  },
+  {
+    id: "sampah_001",
+    tier: "A",
+    title: "TPA Penuh tapi Sampah Tetap Diproduksi",
+    year: 2023,
+    enemyLabel: "DINAS LINGKUNGAN",
+    enemyVisual: "trash_pile",
+    weapons: ["standard", "blur"],
+    openingNarration:
+      "TPA sudah penuh sejak tahun lalu. Sampah tetap diangkut, tapi tidak ada tempat untuk menaruhnya. Akhirnya dibakar.",
+    winNarration:
+      "Program bank sampah warga berhasil. Volume sampah turun 30%. Tapi tanpa dukungan dinas, sulit dipertahankan.",
+    loseNarration:
+      "Sampah menumpuk di ujung gang. Dinas datang seminggu sekali — kalau datang. Bau dan penyakit menyebar.",
+    fact: "Indonesia menghasilkan lebih dari 175.000 ton sampah per hari, mayoritas berakhir di TPA yang sudah melebihi kapasitas.",
+    wordPool: ["SAMPAH", "DAURULANG", "BANKSAMPAH", "ORGANIK", "TPA", "PEMILAHAN"],
+    wordNotes: {
+      BANKSAMPAH: "Sistem pengumpulan sampah oleh warga yang bisa ditukar dengan uang atau kebutuhan.",
+      PEMILAHAN: "Pemisahan sampah dari sumbernya — langkah pertama yang paling sederhana tapi paling jarang dilakukan.",
+    },
+    legitimacyHp: 100,
+    cpuIntervalMs: [3500, 5500],
+  },
 ];

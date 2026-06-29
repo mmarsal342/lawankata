@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import type { GamePhase, Projectile, StageConfig, WordDef, RunState, RunReport, StageResult } from "../types";
-import { WEAPONS, getWeaponDamage } from "../gameData";
+import type { GamePhase, Projectile, StageConfig, WordDef, SlotState, RunState, RunReport, StageResult } from "../types";
+import { WEAPONS, getWeaponDamage, createDeckManager, getRefillDelay, SLOT_COUNT, detectResonance, RESONANCE_MULT } from "../gameData";
+import type { ResonanceLevel } from "../gameData";
 import {
   MAX_HP,
   DEFAULT_LEGITIMACY,
@@ -11,12 +12,18 @@ import {
   INPUT_PENALTY_LEN,
   INPUT_PENALTY_DELAY_MS,
   VIRAL_COUNTER_BONUS,
+  PARRY_WINDOW,
+  PARRY_COOLDOWN_MS,
   RUN_NUMBER_KEY,
   getWpmTier,
 } from "../constants";
-import { generateRun, getActivePool } from "../stages";
+import { generateRun, getActivePool, scaleStageDifficulty } from "../stages";
+import { CHARACTERS, getCharacterById, getWordDamageMult } from "../characters";
+import type { Character } from "../characters";
 import { sfx, setSoundEnabled, initAudio } from "../sound";
 import { useVisualViewport } from "../hooks/useVisualViewport";
+import { useAuth } from "../hooks/useAuth";
+import { saveRun } from "../api";
 
 import ArenaBackground from "./ArenaBackground";
 import PlayerStickman from "./PlayerStickman";
@@ -26,12 +33,18 @@ import HPBar from "./HPBar";
 import LegitimacyBar from "./LegitimacyBar";
 import ShieldIndicator from "./ShieldIndicator";
 import InputField from "./InputField";
-import WordHints from "./WordHints";
+import SlotBar from "./SlotBar";
+import ParryIndicator from "./ParryIndicator";
 import StatusEffectBadge from "./StatusEffectBadge";
 import HUDBar from "./HUDBar";
 import NarrationOverlay from "./NarrationOverlay";
 import RunReportScreen from "./RunReportScreen";
 import StartScreen from "./StartScreen";
+import CharacterSelect from "./CharacterSelect";
+import LeaderboardScreen from "./LeaderboardScreen";
+import RunHistoryScreen from "./RunHistoryScreen";
+import StageGallery from "./StageGallery";
+import TutorialOverlay from "./TutorialOverlay";
 import Footer from "./Footer";
 
 const STAGE_TIME_BASE_MS = 35000;
@@ -43,6 +56,7 @@ function getStageTimeMs(stage: StageConfig): number {
 
 export default function LawanKata() {
   const vh = useVisualViewport();
+  const { user, unlocks, login, logout, updateUnlocks } = useAuth();
 
   const pHPRef = useRef<number>(MAX_HP);
   const legitRef = useRef<number>(DEFAULT_LEGITIMACY);
@@ -58,6 +72,7 @@ export default function LawanKata() {
   const blurDisabledUntilRef = useRef<number>(0);
   const inputDelayUntilRef = useRef<number>(0);
   const inputPenaltyUntilRef = useRef<number>(0);
+  const parryCdRef = useRef<number>(0);
   const stageEndAtRef = useRef<number>(0);
 
   const totalCharsRef = useRef<number>(0);
@@ -66,9 +81,14 @@ export default function LawanKata() {
   const runStateRef = useRef<RunState | null>(null);
   const currentStageRef = useRef<StageConfig | null>(null);
   const activePoolRef = useRef<WordDef[]>([]);
+  const deckMgrRef = useRef<{ draw: () => WordDef; reset: () => void } | null>(null);
+  const slotsRef = useRef<SlotState[]>([]);
   const wordsUsedRef = useRef<Record<string, number>>({});
   const stageStartHpRef = useRef<number>(MAX_HP);
   const stageWpmRef = useRef<number>(0);
+  const runMinHpRef = useRef<number>(MAX_HP);
+  const charRef = useRef<Character>(CHARACTERS[0]);
+  const endRunRef = useRef<() => void>(() => {});
 
   const [playerHP, setPlayerHP] = useState(MAX_HP);
   const [legit, setLegit] = useState(DEFAULT_LEGITIMACY);
@@ -79,6 +99,7 @@ export default function LawanKata() {
   const [input, setInput] = useState("");
   const [wpm, setWpm] = useState(0);
   const [frame, setFrame] = useState(0);
+  const [slots, setSlots] = useState<SlotState[]>([]);
   const [stageIdx, setStageIdx] = useState(0);
   const [totalStages, setTotalStages] = useState(0);
   const [currentStage, setCurrentStage] = useState<StageConfig | null>(null);
@@ -88,11 +109,30 @@ export default function LawanKata() {
   const [enemyHit, setEnemyHit] = useState(false);
   const [toast, setToast] = useState<{ id: number; text: string; type: string } | null>(null);
   const [shake, setShake] = useState(false);
+  const [parryFlash, setParryFlash] = useState<"success" | "miss" | null>(null);
+  const [parryCdEnd, setParryCdEnd] = useState(0);
   const [narrationVariant, setNarrationVariant] = useState<"intro" | "win" | "lose">("intro");
   const [stageHpBefore, setStageHpBefore] = useState(MAX_HP);
   const [stageHpAfter, setStageHpAfter] = useState(MAX_HP);
   const [runReport, setRunReport] = useState<RunReport | null>(null);
   const [soundOn, setSoundOn] = useState(true);
+  const [selectedCharId, setSelectedCharId] = useState("warga");
+  const [showTutorial, setShowTutorial] = useState(() => {
+    try {
+      return !localStorage.getItem("lawankata_tutorial_done");
+    } catch {
+      return false;
+    }
+  });
+
+  const closeTutorial = useCallback(() => {
+    setShowTutorial(false);
+    try {
+      localStorage.setItem("lawankata_tutorial_done", "1");
+    } catch {
+      // ignore
+    }
+  }, []);
 
   const stopAll = useCallback(() => {
     cancelAnimationFrame(rafRef.current);
@@ -126,6 +166,10 @@ export default function LawanKata() {
     wordsUsedRef.current[word] = (wordsUsedRef.current[word] ?? 0) + 1;
   }, []);
 
+  const syncSlots = useCallback(() => {
+    setSlots(slotsRef.current.map((s) => ({ ...s })));
+  }, []);
+
   const firePlayerProjectile = useCallback((word: string, dmg: number) => {
     const finalDmg = Math.max(DAMAGE_FLOOR, dmg);
     const proj: Projectile = {
@@ -143,10 +187,12 @@ export default function LawanKata() {
   }, []);
 
   const executeWord = useCallback(
-    (word: WordDef) => {
+    (word: WordDef, resonance: ResonanceLevel): boolean => {
+      const mult = RESONANCE_MULT[resonance];
       switch (word.role) {
         case "attack": {
-          let dmg = word.dmg ?? 15;
+          const charMult = getWordDamageMult(word.word, charRef.current);
+          let dmg = (word.dmg ?? 15) * mult * charMult;
           if (word.word === "VIRAL") {
             const enemyInFlight = projsRef.current.some((p) => !p.fromPlayer);
             if (enemyInFlight) {
@@ -165,7 +211,7 @@ export default function LawanKata() {
               const pb = (Date.now() - b.t0) / (b.travelMs ?? TRAVEL_MS_PLAYER);
               return pb - pa;
             });
-          const removeN = Math.min(word.removeCount ?? 1, enemyProjs.length);
+          const removeN = Math.min((word.removeCount ?? 1) * resonance, enemyProjs.length);
           if (removeN > 0) {
             const removeIds = new Set(enemyProjs.slice(0, removeN).map((p) => p.id));
             projsRef.current = projsRef.current.filter((p) => !removeIds.has(p.id));
@@ -178,9 +224,9 @@ export default function LawanKata() {
         case "shield": {
           if (shieldRef.current >= MAX_SHIELD_CHARGES) {
             showToast("BUKTI penuh!", "error");
-            return;
+            return false;
           }
-          const add = word.charges ?? 2;
+          const add = Math.min((word.charges ?? 2) * resonance, MAX_SHIELD_CHARGES - shieldRef.current);
           shieldRef.current = Math.min(MAX_SHIELD_CHARGES, shieldRef.current + add);
           setShield(shieldRef.current);
           showToast(`BUKTI +${add} (${shieldRef.current})`, "info");
@@ -189,20 +235,21 @@ export default function LawanKata() {
         }
         case "counter": {
           const enemyProjs = projsRef.current.filter((p) => !p.fromPlayer);
-          if (enemyProjs[0]) {
-            projsRef.current = projsRef.current.filter((p) => p.id !== enemyProjs[0].id);
-            setProjs([...projsRef.current]);
-          }
-          const counterDmg = word.counter ?? 10;
+          const removeN = Math.min(resonance, enemyProjs.length);
+          const removeIds = new Set(enemyProjs.slice(0, removeN).map((p) => p.id));
+          projsRef.current = projsRef.current.filter((p) => !removeIds.has(p.id));
+          setProjs([...projsRef.current]);
+          const counterDmg = (word.counter ?? 10) * resonance;
           legitRef.current = Math.max(0, legitRef.current - counterDmg);
           setLegit(legitRef.current);
           setEnemyHit(true);
           setTimeout(() => setEnemyHit(false), 200);
-          showToast(`SAKSI! hapus 1 + ${counterDmg} dmg`, "success");
+          showToast(`SAKSI! hapus ${removeN} + ${counterDmg} dmg`, "success");
           sfx.counter();
           break;
         }
       }
+      return true;
     },
     [firePlayerProjectile, showToast],
   );
@@ -220,16 +267,37 @@ export default function LawanKata() {
       if (phaseRef.current !== "playing") return;
       if (v.length > input.length) sfx.type();
 
-      const word = activePoolRef.current.find((w) => w.word === v);
-      if (word) {
-        executeWord(word);
+      const slotIdx = slotsRef.current.findIndex((s) => s.word && s.word.word === v);
+      if (slotIdx >= 0) {
+        const wordDef = slotsRef.current[slotIdx].word!;
+        const resonance = detectResonance(slotsRef.current, v);
+        const success = executeWord(wordDef, resonance);
+        if (!success) return;
+
+        const matchingIdxs: number[] = [];
+        slotsRef.current.forEach((s, si) => {
+          if (s.word && s.word.word === v) matchingIdxs.push(si);
+        });
+        const delay = Math.round(getRefillDelay(wordDef) * charRef.current.refillMod);
+        matchingIdxs.forEach((si, mi) => {
+          const stagger = delay + mi * 150;
+          slotsRef.current[si] = { word: null, refillAt: now + stagger, refillDuration: stagger };
+        });
+        syncSlots();
+
+        if (resonance >= 2) {
+          const mult = RESONANCE_MULT[resonance];
+          showToast(`GAUNG x${mult}!`, "success");
+          sfx.resonance();
+        }
+
         setInput("");
-        trackWord(word.word);
-        updateWPM(word.word.length);
+        trackWord(wordDef.word);
+        updateWPM(wordDef.word.length);
         return;
       }
 
-      const hasPrefix = activePoolRef.current.some((w) => w.word.startsWith(v));
+      const hasPrefix = slotsRef.current.some((s) => s.word && s.word.word.startsWith(v));
       if (v.length > INPUT_PENALTY_LEN && !hasPrefix) {
         setShake(true);
         setTimeout(() => setShake(false), 300);
@@ -238,7 +306,7 @@ export default function LawanKata() {
         showToast("Terlalu panjang!", "error");
       }
     },
-    [input.length, executeWord, trackWord, updateWPM, showToast],
+    [input.length, executeWord, trackWord, updateWPM, showToast, syncSlots],
   );
 
   const finishStage = useCallback(
@@ -250,10 +318,12 @@ export default function LawanKata() {
       if (!stage || !runStateRef.current) return;
 
       const hpBefore = stageStartHpRef.current;
+      runStateRef.current.playerHP = pHPRef.current;
       let hpAfter = runStateRef.current.playerHP;
 
       if (won) {
-        hpAfter = Math.min(MAX_HP, hpAfter + WIN_HP_RECOVERY);
+        const recovery = WIN_HP_RECOVERY + charRef.current.hpRecoveryBonus;
+        hpAfter = Math.min(MAX_HP, hpAfter + recovery);
         runStateRef.current.playerHP = hpAfter;
         pHPRef.current = hpAfter;
         setPlayerHP(hpAfter);
@@ -282,6 +352,10 @@ export default function LawanKata() {
       setStageHpBefore(hpBefore);
       setStageHpAfter(hpAfter);
       setNarrationVariant(won ? "win" : "lose");
+
+      if (!won) {
+        setTimeout(() => endRunRef.current(), 2500);
+      }
 
       phaseRef.current = "stage_end";
       setPhase("stage_end");
@@ -374,7 +448,9 @@ export default function LawanKata() {
           showToast("BUKTI tangkis!", "info");
         } else {
           if (p.dmg > 0) {
-            pHPRef.current = Math.max(0, pHPRef.current - p.dmg);
+            const finalDmg = Math.round(p.dmg * charRef.current.damageTakenMult);
+            pHPRef.current = Math.max(0, pHPRef.current - finalDmg);
+            if (pHPRef.current < runMinHpRef.current) runMinHpRef.current = pHPRef.current;
             setPlayerHP(pHPRef.current);
             sfx.playerHit();
           }
@@ -405,7 +481,16 @@ export default function LawanKata() {
       setProjs([...projsRef.current]);
       checkStageEnd();
     }
-  }, [frame, phase, blurActive, inputDelayed, showToast, checkStageEnd, finishStage]);
+
+    let slotsChanged = false;
+    for (const slot of slotsRef.current) {
+      if (!slot.word && now >= slot.refillAt && deckMgrRef.current) {
+        slot.word = deckMgrRef.current.draw();
+        slotsChanged = true;
+      }
+    }
+    if (slotsChanged) syncSlots();
+  }, [frame, phase, blurActive, inputDelayed, showToast, checkStageEnd, finishStage, syncSlots]);
 
   const enterStage = useCallback(
     (idx: number) => {
@@ -415,16 +500,24 @@ export default function LawanKata() {
       run.currentStageIdx = idx;
 
       currentStageRef.current = stage;
-      activePoolRef.current = getActivePool(stage);
+      const scaled = scaleStageDifficulty(stage, idx);
+      const pool = getActivePool(scaled);
+      activePoolRef.current = pool;
+      deckMgrRef.current = createDeckManager(pool);
+      slotsRef.current = [];
+      for (let i = 0; i < SLOT_COUNT; i++) {
+        slotsRef.current.push({ word: deckMgrRef.current.draw(), refillAt: 0, refillDuration: 0 });
+      }
       stageStartHpRef.current = run.playerHP;
       pHPRef.current = run.playerHP;
-      legitRef.current = stage.legitimacyHp;
-      legitMaxRef.current = stage.legitimacyHp;
+      legitRef.current = scaled.legitimacyHp;
+      legitMaxRef.current = scaled.legitimacyHp;
       projsRef.current = [];
       shieldRef.current = 0;
       blurDisabledUntilRef.current = 0;
       inputDelayUntilRef.current = 0;
       inputPenaltyUntilRef.current = 0;
+      parryCdRef.current = 0;
       stageEndAtRef.current = 0;
       wordsUsedRef.current = {};
       stageWpmRef.current = 0;
@@ -432,31 +525,39 @@ export default function LawanKata() {
       startTimeRef.current = 0;
 
       setPlayerHP(run.playerHP);
-      setLegit(stage.legitimacyHp);
-      setLegitMax(stage.legitimacyHp);
+      setLegit(scaled.legitimacyHp);
+      setLegitMax(scaled.legitimacyHp);
       setProjs([]);
       setShield(0);
       setBlurActive(false);
       setInputDelayed(false);
       setInput("");
       setWpm(0);
+      setParryCdEnd(0);
       setCurrentStage(stage);
       setStageIdx(idx + 1);
       setStageHpBefore(run.playerHP);
       setStageHpAfter(run.playerHP);
       setNarrationVariant("intro");
+      syncSlots();
+
+      if (idx > 0) {
+        showToast(`HP: ${run.playerHP}/${MAX_HP}`, "info");
+      }
 
       phaseRef.current = "stage_intro";
       setPhase("stage_intro");
     },
-    [],
+    [syncSlots, showToast],
   );
 
   const startStagePlay = useCallback(() => {
     initAudio();
     sfx.start();
     const stage = currentStageRef.current;
-    stageEndAtRef.current = Date.now() + (stage ? getStageTimeMs(stage) : STAGE_TIME_BASE_MS);
+    const run = runStateRef.current;
+    const scaled = stage && run ? scaleStageDifficulty(stage, run.currentStageIdx) : null;
+    stageEndAtRef.current = Date.now() + (scaled ? getStageTimeMs(scaled) : STAGE_TIME_BASE_MS);
     phaseRef.current = "playing";
     setPhase("playing");
     setFrame(0);
@@ -466,6 +567,7 @@ export default function LawanKata() {
   const startRun = useCallback(() => {
     stopAll();
     initAudio();
+    charRef.current = getCharacterById(selectedCharId);
     const stages = generateRun();
     runStateRef.current = {
       stages,
@@ -474,11 +576,12 @@ export default function LawanKata() {
       results: [],
     };
     pHPRef.current = MAX_HP;
+    runMinHpRef.current = MAX_HP;
     setRunReport(null);
     setPlayerHP(MAX_HP);
     setTotalStages(stages.length);
     enterStage(0);
-  }, [stopAll, enterStage]);
+  }, [stopAll, enterStage, selectedCharId]);
 
   const buildReport = useCallback((run: RunState): RunReport => {
     const results = run.results;
@@ -529,6 +632,9 @@ export default function LawanKata() {
 
     return {
       runNumber,
+      characterId: charRef.current.id,
+      characterName: charRef.current.name,
+      characterEmoji: charRef.current.emoji,
       results,
       avgWpm,
       wpmTier: getWpmTier(avgWpm),
@@ -550,9 +656,31 @@ export default function LawanKata() {
     }
     const report = buildReport(run);
     setRunReport(report);
+
+    if (user) {
+      saveRun({
+        characterId: report.characterId,
+        characterName: report.characterName,
+        avgWpm: report.avgWpm,
+        wpmTier: report.wpmTier,
+        wins: report.results.filter((r) => r.won).length,
+        losses: report.results.filter((r) => !r.won).length,
+        stagesTotal: report.results.length,
+        vocabCount: report.accumulatedVocab.length,
+        minHp: runMinHpRef.current,
+        runData: JSON.stringify(report),
+      }).then((result) => {
+        if (result.unlocked && result.unlocked.length > (unlocks?.length ?? 0)) {
+          updateUnlocks(result.unlocked);
+        }
+      });
+    }
+
     phaseRef.current = "run_end";
     setPhase("run_end");
-  }, [stopAll, buildReport]);
+  }, [stopAll, buildReport, user, unlocks, updateUnlocks]);
+
+  endRunRef.current = endRun;
 
   const nextStage = useCallback(() => {
     const run = runStateRef.current;
@@ -569,6 +697,14 @@ export default function LawanKata() {
     }
     enterStage(nextIdx);
   }, [endRun, enterStage]);
+
+  const goToSelect = useCallback(() => {
+    stopAll();
+    initAudio();
+    sfx.select();
+    phaseRef.current = "select";
+    setPhase("select");
+  }, [stopAll]);
 
   const goToIdle = useCallback(() => {
     stopAll();
@@ -589,6 +725,55 @@ export default function LawanKata() {
     }
   }, [soundOn]);
 
+  const tryParry = useCallback(() => {
+    if (phaseRef.current !== "playing") return;
+    const now = Date.now();
+    if (now < parryCdRef.current) return;
+    parryCdRef.current = now + PARRY_COOLDOWN_MS;
+    setParryCdEnd(parryCdRef.current);
+
+    let bestProj: Projectile | null = null;
+    let bestProgress = 0;
+
+    for (const p of projsRef.current) {
+      if (p.fromPlayer) continue;
+      const travel = p.travelMs ?? TRAVEL_MS_PLAYER;
+      const progress = (now - p.t0) / travel;
+      if (progress >= PARRY_WINDOW && progress < 1) {
+        if (!bestProj || progress > bestProgress) {
+          bestProj = p;
+          bestProgress = progress;
+        }
+      }
+    }
+
+    if (bestProj) {
+      projsRef.current = projsRef.current.filter((p) => p.id !== bestProj!.id);
+      setProjs([...projsRef.current]);
+      showToast("TANGKIS!", "success");
+      sfx.parry();
+      setParryFlash("success");
+      setTimeout(() => setParryFlash(null), 300);
+    } else {
+      showToast("MELESET!", "error");
+      sfx.parryMiss();
+      setParryFlash("miss");
+      setTimeout(() => setParryFlash(null), 300);
+    }
+  }, [showToast]);
+
+  useEffect(() => {
+    if (phase !== "playing") return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.code === "Space") {
+        e.preventDefault();
+        tryParry();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [phase, tryParry]);
+
   useEffect(() => {
     return () => stopAll();
   }, [stopAll]);
@@ -596,8 +781,8 @@ export default function LawanKata() {
   const partialMatch = (() => {
     if (!input || input.length < 1) return null;
     if (Date.now() < blurDisabledUntilRef.current) return null;
-    for (const w of activePoolRef.current) {
-      if (w.word.startsWith(input) && w.word !== input) return w.word;
+    for (const s of slotsRef.current) {
+      if (s.word && s.word.word.startsWith(input) && s.word.word !== input) return s.word.word;
     }
     return null;
   })();
@@ -614,8 +799,16 @@ export default function LawanKata() {
     >
       <ArenaBackground />
 
-      {phase !== "idle" && phase !== "run_end" && (
+      {phase !== "idle" && phase !== "select" && phase !== "run_end" && (
         <HUDBar wpm={wpm} stageIdx={stageIdx} totalStages={totalStages} />
+      )}
+
+      {phase === "playing" && (
+        <div className="absolute top-4 left-2 md:left-4 z-20">
+          <span className="font-mono text-[9px] md:text-xs" style={{ color: charRef.current.color }}>
+            {charRef.current.emoji} {charRef.current.name}
+          </span>
+        </div>
       )}
 
       {stageTimeLeft !== null && (
@@ -631,6 +824,12 @@ export default function LawanKata() {
       )}
 
       <div className="absolute top-4 right-2 md:right-4 z-30 flex gap-2">
+        <button
+          onClick={() => setShowTutorial(true)}
+          className="px-2 py-1 md:px-3 md:py-1.5 bg-black/50 rounded-lg font-mono text-[9px] md:text-sm hover:bg-black/70 transition-colors text-gray-400"
+        >
+          ?
+        </button>
         <button
           onClick={toggleSound}
           className="px-2 py-1 md:px-3 md:py-1.5 bg-black/50 rounded-lg font-mono text-[9px] md:text-sm hover:bg-black/70 transition-colors text-gray-400"
@@ -664,7 +863,34 @@ export default function LawanKata() {
             blurEnd={blurDisabledUntilRef.current}
             delayEnd={inputDelayUntilRef.current}
           />
+
+          {/* Parry cooldown indicator (desktop) */}
+          <div className="absolute top-4 right-14 md:right-24 z-20 hidden md:block">
+            <ParryIndicator cdEnd={parryCdEnd} />
+          </div>
+
+          {/* Mobile parry button */}
+          <button
+            onTouchStart={(e) => {
+              e.preventDefault();
+              tryParry();
+            }}
+            onMouseDown={(e) => e.preventDefault()}
+            className="md:hidden absolute bottom-44 right-3 z-30 w-14 h-14 rounded-full bg-cyan-600/80 border-2 border-cyan-400 font-mono font-bold text-white text-[10px] flex items-center justify-center active:scale-90 transition-transform touch-none"
+            style={{ boxShadow: "0 0 10px rgba(34, 211, 238, 0.4)" }}
+          >
+            TANGKIS
+          </button>
         </>
+      )}
+
+      {/* Parry flash overlay */}
+      {parryFlash && (
+        <div
+          className={`fixed inset-0 z-40 pointer-events-none transition-opacity duration-300 ${
+            parryFlash === "success" ? "bg-cyan-400/20" : "bg-red-500/20"
+          }`}
+        />
       )}
 
       {phase === "stage_intro" && (
@@ -698,9 +924,9 @@ export default function LawanKata() {
 
       {phase === "playing" && (
         <div className="absolute bottom-0 left-0 right-0 p-2 md:p-4 space-y-1.5 z-20">
-          <WordHints
-            pool={activePoolRef.current}
-            input={input}
+          <SlotBar
+            slots={slots}
+            typedInput={input}
             blurActive={blurActive}
           />
           <InputField
@@ -715,7 +941,43 @@ export default function LawanKata() {
         </div>
       )}
 
-      {phase === "idle" && <StartScreen onStart={startRun} />}
+      {phase === "idle" && (
+        <StartScreen
+          onStart={goToSelect}
+          user={user}
+          onLogin={login}
+          onLogout={logout}
+          onLeaderboard={() => setPhase("leaderboard")}
+          onHistory={() => setPhase("history")}
+          onGallery={() => setPhase("gallery")}
+        />
+      )}
+
+      {phase === "leaderboard" && (
+        <LeaderboardScreen onBack={() => setPhase("idle")} />
+      )}
+
+      {phase === "history" && (
+        <RunHistoryScreen onBack={() => setPhase("idle")} />
+      )}
+
+      {phase === "gallery" && (
+        <StageGallery onBack={() => setPhase("idle")} />
+      )}
+
+      {phase === "select" && (
+        <CharacterSelect
+          selectedId={selectedCharId}
+          unlocks={unlocks}
+          isLoggedIn={!!user}
+          onSelect={(id) => {
+            setSelectedCharId(id);
+            sfx.select();
+          }}
+          onFight={startRun}
+          onBack={goToIdle}
+        />
+      )}
 
       {phase === "stage_intro" && (
         <NarrationOverlay
@@ -744,8 +1006,9 @@ export default function LawanKata() {
       {phase === "run_end" && runReport && (
         <RunReportScreen report={runReport} onRestart={goToIdle} />
       )}
-
       {phase !== "run_end" && <Footer />}
+
+      {showTutorial && <TutorialOverlay onClose={closeTutorial} />}
     </div>
   );
 }

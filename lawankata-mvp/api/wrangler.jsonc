@@ -1,0 +1,17 @@
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "lawankata-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-06-01",
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "lawankata-db",
+      "database_id": "d06566dc-3ad5-4b58-a5e5-2ca0bf550c37"
+    }
+  ],
+  "vars": {
+    "FRONTEND_URL": "https://lawankata.pages.dev",
+    "GOOGLE_CLIENT_ID": "746744198801-tq5vgo6grn39puto88e1s9e2rga61l3i.apps.googleusercontent.com"
+  }
+}

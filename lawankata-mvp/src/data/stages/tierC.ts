@@ -125,4 +125,124 @@ export const TIER_C_STAGES: StageConfig[] = [
     legitimacyHp: 120,
     cpuIntervalMs: [2500, 4000],
   },
+  {
+    id: "ite_001",
+    tier: "C",
+    title: "Pasal Karet UU ITE",
+    year: 2023,
+    enemyLabel: "PASAL KARET ITE",
+    enemyVisual: "digital_handcuff",
+    weapons: ["repression", "blur"],
+    openingNarration:
+      "Kamu posting keluhan tentang dinas publik. Besoknya, dipanggil polisi. Pasal 27 ayat 3 UU ITE: 'memuat informasi yang menimbulkan rasa tidak suka'.",
+    winNarration:
+      "Mahkamah Konstitasi membatalkan pasal karet ini. Tapi yang sudah dijatuhi hukuman tidak semua dibebaskan.",
+    loseNarration:
+      "Kamu divonis 6 bulan penjara. Perceraian, kehilangan pekerjaan. Teman-teman berhenti posting keluhan.",
+    fact: "Pasal 27 ayat 3 UU ITE dikecam karena terlalu luas dan sering dipakai untuk membungkam kritik warga.",
+    wordPool: ["ITE", "KARET", "EKSPRESI", "PIDANA", "RESTRUKTURISASI", "ASASI"],
+    wordNotes: {
+      KARET: "Istilah untuk pasal yang bisa ditarik ke berbagai tafsir — fleksibel bagi penguasa, merugikan warga.",
+      EKSPRESI: "Hak menyatakan pendapat yang dilindungi konstitusi namun sering dibatasi oleh UU ITE.",
+      RESTRUKTURISASI: "Perubahan struktur UU ITE yang seharusnya memperjelas pasal-pasal karet.",
+    },
+    legitimacyHp: 120,
+    cpuIntervalMs: [2500, 4000],
+  },
+  {
+    id: "jurnalis_001",
+    tier: "C",
+    title: "Jurnalis yang Dikriminalisasi",
+    year: 2024,
+    enemyLabel: "TEKANAN HUKUM",
+    enemyVisual: "press_badge",
+    weapons: ["repression", "blur"],
+    openingNarration:
+      "Jurnalis yang mengungkap dugaan korupsi ditangkap. Tuduhan: 'difamasi'. Padahal beritanya berbasis dokumen publik.",
+    winNarration:
+      "Dukungan internasional memaksa pembebasan. Tapi efeknya menakutkan jurnalis lain: mungkin lain kali, lebih baik diam.",
+    loseNarration:
+      "Jurnalis divonis bersalah. Media lain melipat kembali laporan investigasi. Berita investigasi berkurang — korupsi makin leluasa.",
+    fact: "Indonesia menurun di indeks kebebasan pers internasional karena kriminalisasi dan kekerasan terhadap jurnalis.",
+    wordPool: ["JURNALIS", "PERSBEBAS", "DEFAMASI", "SUMBER", "WHISTLEBLOWER", "INVESTIGASI"],
+    wordNotes: {
+      WHISTLEBLOWER: "Pemberi informasi dari dalam yang membongkar praktik buruk, dilindungi hukum tapi rentan pembalasan.",
+      DEFAMASI: "Tuduhan mencemarkan nama baik yang sering dipakai untuk membungkam laporan jurnalistik.",
+      PERSBEBAS: "Kebebasan pers yang menjadi pilar demokrasi — tanpa pers bebas, kekuasaan tidak terkontrol.",
+    },
+    legitimacyHp: 120,
+    cpuIntervalMs: [2500, 4000],
+  },
+  {
+    id: "pajak_001",
+    tier: "C",
+    title: "Tax Amnesty dan Pengampunan Pajak",
+    year: 2022,
+    enemyLabel: "KEBIJAKAN FISKAL",
+    enemyVisual: "tax_form",
+    weapons: ["blur", "slow_high"],
+    openingNarration:
+      "Kamu bayar pajak tepat waktu setiap tahun. Tapi yang korupsi triliunan? Mereka dapat amnesti. 'Pengampunan' untuk yang kaya.",
+    winNarration:
+      "KPK dan DJP bekerja sama mengusut. Beberapa pengusaha yang ikut amnesti tetap ditindak. Tapi ini pengecualian, bukan aturan.",
+    loseNarration:
+      "Amnesti disahkan. Triliunan pajak yang seharusnya jadi hak negara, diampunkan. Layanan publik tetap minim. Kamu tetap bayar penuh.",
+    fact: "Program tax amnesty Indonesia mengampunkan triliunan rupiah pajak terutang, didominasi oleh wajib pajak besar.",
+    wordPool: ["AMNESTI", "PAJAK", "DJP", "WAJIB", "PENGAMPUNAN", "KEWAJIBAN"],
+    wordNotes: {
+      AMNESTI: "Pengampunan pajak untuk pengusaha besar — kontroversial karena merugikan keadilan fiskal.",
+      DJP: "Direktorat Jenderal Pajak — lembaga yang mengelola dan menegakkan kewajiban pajak.",
+      WAJIB: "Kewajiban setiap warga untuk membayar pajak sesuai penghasilan — tapi penegakannya tidak merata.",
+    },
+    legitimacyHp: 120,
+    cpuIntervalMs: [2500, 4000],
+  },
+  {
+    id: "pdp_001",
+    tier: "C",
+    title: "Data Pribadi Dijual Bebas",
+    year: 2023,
+    enemyLabel: "KEBOCORAN DATA",
+    enemyVisual: "data_breach",
+    weapons: ["spam", "blur"],
+    openingNarration:
+      "Kamu dapat SMS pinjaman online. Mereka tahu nama, NIK, alamatmu. Data yang seharusnya aman di lembaga negara — dijual di telegram.",
+    winNarration:
+      "UU PDP akhirnya disahkan. Perusahaan wajib lindungi data. Pelaku kebocoran dijerat. Tapi data yang sudah bocor tidak bisa ditarik kembali.",
+    loseNarration:
+      "Identitasmu dipakai untuk pinjol ilegal. Kamu dilaporkan ke BI Checking untuk hutang yang tidak pernah kamu buat.",
+    fact: "Indonesia mencatat ratusan kebocoran data besar dari lembaga negara, dari KTP hingga data kesehatan.",
+    wordPool: ["DATA", "PRIBADI", "UUPIP", "NIK", "BOCOR", "ENSRIPTIF"],
+    wordNotes: {
+      UUPIP: "UU Pelindungan Data Pribadi — seharusnya melindungi data warga, tapi penegakannya masih lemah.",
+      NIK: "Nomor Induk Kependudukan yang menjadi kunci identitas digital dan rentan disalahgunakan.",
+      BOCOR: "Kebocoran data yang terjadi karena sistem keamanan lemah atau oknum yang menjual akses.",
+    },
+    legitimacyHp: 120,
+    cpuIntervalMs: [2500, 4000],
+  },
+  {
+    id: "ruu_001",
+    tier: "C",
+    title: "RUU yang Diam-diam Disahkan",
+    year: 2025,
+    enemyLabel: "PROSES LEGISLASI KILAT",
+    enemyVisual: "rubber_stamp",
+    weapons: ["spam", "repression"],
+    openingNarration:
+      "RUU ini muncul di Senayan tanpa publikasi. Sidang kilat. Tidak ada partisipasi publik. Esok harinya, sudah disahkan.",
+    winNarration:
+      "Mahkamah Konstitusi membatalkan karena proses tidak transparan. Tapi kerugian selama berlakunya sudah terjadi.",
+    loseNarration:
+      "RUU disahkan tanpa warga tahu. Dampaknya baru terasa bertahun kemudian — ketika sudah terlambat untuk mengubah.",
+    fact: "Beberapa RUU di Indonesia disahkan tanpa partisipasi publik memadai, melanggar prinsip transparansi legislatif.",
+    wordPool: ["RUU", "PARTISIPASI", "TRANSPARANSI", "LOBBY", "REVISI", "PUBLICHEARING"],
+    wordNotes: {
+      PARTISIPASI: "Hak warga untuk terlibat dalam proses pembentukan undang-undang — sering diabaikan.",
+      PUBLICHEARING: "Sidang dengar pendapat publik yang seharusnya menjadi forum warga menyampaikan pendapat.",
+      LOBBY: "Pengaruh kelompok tertentu pada proses legislatif yang sering terjadi di luar publik.",
+    },
+    legitimacyHp: 120,
+    cpuIntervalMs: [2500, 4000],
+  },
 ];

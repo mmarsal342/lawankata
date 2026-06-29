@@ -1,5 +1,9 @@
 export type GamePhase =
   | "idle"
+  | "select"
+  | "leaderboard"
+  | "history"
+  | "gallery"
   | "stage_intro"
   | "playing"
   | "stage_end"
@@ -88,8 +92,17 @@ export interface RunState {
   results: StageResult[];
 }
 
+export interface SlotState {
+  word: WordDef | null;
+  refillAt: number;
+  refillDuration: number;
+}
+
 export interface RunReport {
   runNumber: number;
+  characterId: string;
+  characterName: string;
+  characterEmoji: string;
   results: StageResult[];
   avgWpm: number;
   wpmTier: string;

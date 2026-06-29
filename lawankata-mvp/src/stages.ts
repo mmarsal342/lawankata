@@ -33,6 +33,8 @@ function pickRandom<T>(arr: T[], n: number): T[] {
   return shuffle(arr).slice(0, n);
 }
 
+const TIER_ORDER: Record<string, number> = { A: 0, B: 1, C: 2 };
+
 export function generateRun(): StageConfig[] {
   const a = pickRandom(TIER_A_STAGES, Math.min(RUN_FORMULA.tierA, TIER_A_STAGES.length));
   const b = pickRandom(TIER_B_STAGES, Math.min(RUN_FORMULA.tierB, TIER_B_STAGES.length));
@@ -57,7 +59,22 @@ export function generateRun(): StageConfig[] {
     fillIdx++;
   }
 
+  run.sort((x, y) => TIER_ORDER[x.tier] - TIER_ORDER[y.tier]);
   return run;
+}
+
+export function scaleStageDifficulty(stage: StageConfig, stageIdx: number): StageConfig {
+  const progress = stageIdx / 7;
+  const speedMult = 1 - Math.min(0.35, progress * 0.35);
+  const [minI, maxI] = stage.cpuIntervalMs;
+  return {
+    ...stage,
+    legitimacyHp: Math.round(stage.legitimacyHp * (1 + progress * 0.3)),
+    cpuIntervalMs: [
+      Math.round(minI * speedMult),
+      Math.round(maxI * speedMult),
+    ],
+  };
 }
 
 export function getActivePool(stage: StageConfig): WordDef[] {

@@ -100,6 +100,18 @@ export const sfx = {
     tone(600, 0.08, "triangle", 0.2, 1200);
     setTimeout(() => noiseBurst(0.08, 3000, 0.12), 50);
   },
+  parry() {
+    tone(1000, 0.1, "square", 0.2, 1500);
+    noiseBurst(0.06, 4000, 0.1);
+  },
+  parryMiss() {
+    tone(200, 0.15, "sawtooth", 0.15, 100);
+  },
+  resonance() {
+    tone(880, 0.12, "triangle", 0.2);
+    setTimeout(() => tone(1100, 0.12, "triangle", 0.22), 70);
+    setTimeout(() => tone(1320, 0.18, "triangle", 0.25), 140);
+  },
   staticNoise() {
     noiseBurst(0.4, 1500, 0.18, 200);
   },

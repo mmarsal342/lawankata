@@ -5,3 +5,5 @@ dist-ssr
 *.local
 .DS_Store
 *.log
+api/node_modules
+api/.wrangler

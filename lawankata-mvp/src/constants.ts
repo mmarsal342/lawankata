@@ -10,6 +10,9 @@ export const INPUT_PENALTY_DELAY_MS = 300;
 export const VIRAL_COUNTER_BONUS = 8;
 export const STAGE_WORD_DEFAULT_DMG = 20;
 
+export const PARRY_WINDOW = 0.65;
+export const PARRY_COOLDOWN_MS = 1500;
+
 export const PLAYER_COLOR = "#86efac";
 export const PLAYER_GLOW = "rgba(134, 239, 172, 0.8)";
 export const LEGIT_COLOR = "#818cf8";

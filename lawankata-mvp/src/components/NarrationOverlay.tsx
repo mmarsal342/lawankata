@@ -79,6 +79,11 @@ export default function NarrationOverlay({
                 <span className="text-green ml-2 text-[10px] md:text-xs">(+15 recovery)</span>
               )}
             </p>
+            {variant === "lose" && (
+              <p className="text-red-400 text-[9px] md:text-[10px] mt-1 animate-pulse">
+                Run berakhir — sistem menang kali ini.
+              </p>
+            )}
           </div>
         )}
 
@@ -90,7 +95,7 @@ export default function NarrationOverlay({
             color: "#0a0a0a",
           }}
         >
-          {variant === "intro" ? "HADAPI" : "LANJUT"}
+          {variant === "intro" ? "HADAPI" : variant === "lose" ? "AKHIR RUN" : "LANJUT"}
         </button>
       </div>
     </div>
